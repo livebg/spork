@@ -11,6 +11,7 @@ module Spork
   autoload :Runner,        (LIBDIR + 'spork/runner').to_s
   autoload :Forker,        (LIBDIR + 'spork/forker').to_s
   autoload :Diagnoser,     (LIBDIR + 'spork/diagnoser').to_s
+  autoload :GemHelpers,    (LIBDIR + 'spork/gem_helpers').to_s
 
   class << self
     # Run a block, during prefork mode.  By default, if prefork is called twice in the same file and line number, the supplied block will only be ran once.
@@ -101,18 +102,11 @@ module Spork
       trap_method((class << klass; self; end), method_name)
     end
     
-    def detect_and_require(subfolder)
-      ([LIBDIR.to_s] + other_spork_gem_load_paths).uniq.each do |gem_path|
-        Dir.glob(File.join(gem_path, subfolder)).each { |file| require file }
+    def detect_and_require(pattern)
+      GemHelpers.find_files_using_latest_spec(pattern).uniq.each do |path|
+        next if path.match(/_spec\.rb/)
+        require path
       end
-    end
-
-    def other_spork_gem_load_paths
-      @other_spork_gem_load_paths ||= (
-        Gem.latest_load_paths.grep(/spork/).select do |g|
-          not g.match(%r{/spork-[0-9\-.]+/lib}) # don't include other versions of spork
-        end
-      )
     end
 
     private
